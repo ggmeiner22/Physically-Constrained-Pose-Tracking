@@ -1,0 +1,4 @@
+# Core
+opencv-python
+numpy
+torch
