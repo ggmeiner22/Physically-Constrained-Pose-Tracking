@@ -6,13 +6,13 @@
 python3 --version
 ```
 
-  2) Create & activate the virtual environment
-macOS/Linux
+  2) Create & activate the virtual environment  
+2a) macOS/Linux
 ```
 python3 -m venv .venv
 source .venv/bin/activate
 ```
-Windows (PowerShell)
+2b) Windows (PowerShell)
 ```
 py -m venv .venv
 .venv\Scripts\Activate
@@ -33,7 +33,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
   5) Run the project
-Training
+5a) Training
 ```
 python train.py --scenario hanging --video_path datasets/sample.mp4 --filter ekf
 ```
@@ -42,7 +42,7 @@ python train.py --scenario hanging --video_path datasets/sample.mp4 --filter ekf
 python train.py --scenario hanging --video_path datasets/sample.mp4 --filter ekf --use_vel_meas
 ```
 
-Visualization
+5b) Visualization
 ```
 python tools/visualize_ekf_vs_raw.py --video_path datasets/sample.mp4 --scenario hanging
 ```
