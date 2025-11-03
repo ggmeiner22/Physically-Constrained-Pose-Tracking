@@ -12,7 +12,7 @@ python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
 ```
-2b) Windows (PowerShell)
+   2b) Windows (PowerShell)
 ```
 py -m venv .venv
 .venv\Scripts\Activate
