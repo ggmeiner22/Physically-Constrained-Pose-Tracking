@@ -6,7 +6,7 @@
 python3 --version
 ```
 
-  2) Create & activate the virtual environment
+  2) Create & activate the virtual environment   
 2a) macOS/Linux
 ```
 python3 -m venv .venv
