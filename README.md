@@ -34,6 +34,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
   5) Run the project
+
 5a) Training
 ```
 python train.py --scenario hanging --video_path datasets/sample.mp4 --filter ekf
