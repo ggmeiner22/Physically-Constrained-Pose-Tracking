@@ -23,8 +23,9 @@ A modular PyTorch + OpenCV pipeline for physics-aware pose tracking. Predict pos
 macOS / Linux (recommended)
   1. Install prerequisites
 ```
-python3 --version     # use 3.10 or 3.11
+python3 --version    
 ```
+>  Use 3.10 or 3.11
 
   2. Open a terminal in your project folder
   3. Create the venv + install deps
@@ -39,9 +40,9 @@ make dev
 
   5. Run a quick training
 ```
-# By default VIDEO=datasets/sample.mp4 and SCEN=hanging
 make train
 ```
+> By default VIDEO=datasets/sample.mp4 and SCEN=hanging
 
   6. Render EKF vs RAW comparison
 ```
