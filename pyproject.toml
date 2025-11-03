@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "pcpose"
+version = "0.1.0"
+description = "Physically-Constrained Pose Tracking with PyTorch + OpenCV"
+authors = [{name = "Garrett Gmeiner"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+"opencv-python",
+"numpy",
+"torch",
+]
+
+
+[project.urls]
+homepage = ""
+repository = ""
+
+
+[tool.setuptools]
+packages = ["pcpose", "pcpose.models", "pcpose"]
+include-package-data = true

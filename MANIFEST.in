@@ -1,0 +1,4 @@
+include requirements.txt
+recursive-include pcpose *.py
+recursive-include tools *.py
+recursive-include outputs *
