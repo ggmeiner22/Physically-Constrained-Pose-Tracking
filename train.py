@@ -26,7 +26,9 @@ def build_args() -> argparse.Namespace:
     p.add_argument("--save_every", type=int, default=5)
     p.add_argument("--max_frames", type=int, default=0)
     p.add_argument("--filter", type=str, choices=["ekf", "ema"], default="ekf")
-    p.add_argument("--use_vel_meas", action="store_true", help="EKF consumes [x,y,vx,vy] as measurement")
+    p.add_argument("--use_vel_meas", action="store_true", help="EKF consumes [x,y,vx,vy]")
+    p.add_argument("--model", type=str, choices=["temporal", "tiny"], default="temporal",
+                   help="Choose the visual backbone")
     return p.parse_args()
 
 
@@ -62,7 +64,11 @@ def main():
     
     
     # Create model
-    model = PosePipeline(cfg.scenario, cfg.device, filter_type=args.filter, use_vel_meas=args.use_vel_meas)
+    model = PosePipeline(cfg.scenario, cfg.device,
+                     filter_type=args.filter,
+                     use_vel_meas=args.use_vel_meas,
+                     model_type=args.model)
+
     # update weights from CLI
     model.weights.lambda_phys = cfg.lambda_phys
     model.weights.lambda_smooth = cfg.lambda_smooth
