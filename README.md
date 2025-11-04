@@ -57,7 +57,7 @@ make viz
 > Want to point at a different model, video, or scenario?
 ```
 make train MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
-make viz   MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
+make viz   VIDEO=/path/to/your.mp4 SCEN=sliding
 ```
 
   7. Freeze the environment (optional)
