@@ -48,16 +48,16 @@ make dev
 ```
 make train
 ```
-> By default VIDEO=datasets/sample.mp4 and SCEN=hanging
+> By default --MODEL=temporal, VIDEO=datasets/sample.mp4 and SCEN=hanging
 
   6. Render EKF vs RAW comparison
 ```
 make viz
 ```
-> Want to point at a different video or scenario?
+> Want to point at a different model, video, or scenario?
 ```
-make train VIDEO=/path/to/your.mp4 SCEN=sliding
-make viz   VIDEO=/path/to/your.mp4 SCEN=sliding
+make train MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
+make viz   MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
 ```
 
   7. Freeze the environment (optional)
