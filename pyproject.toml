@@ -18,10 +18,9 @@ dependencies = [
 
 
 [project.urls]
-homepage = ""
-repository = ""
+Homepage = "https://github.com/ggmeiner22/Physically-Constrained-Pose-Tracking"
+Repository = "https://github.com/ggmeiner22/Physically-Constrained-Pose-Tracking"
 
 
-[tool.setuptools]
-packages = ["pcpose", "pcpose.models", "pcpose"]
-include-package-data = true
+[tool.setuptools.packages.find]
+include = ["pcpose*"]
