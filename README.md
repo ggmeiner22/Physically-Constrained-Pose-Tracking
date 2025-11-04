@@ -50,6 +50,11 @@ make train
 ```
 > By default VIDEO=datasets/sample.mp4 and SCEN=hanging
 
+Otherwise, specify using:
+```
+make train VIDEO=path/to/your.mp4 SCEN=sliding
+```
+
   6. Render EKF vs RAW comparison
 ```
 make viz
