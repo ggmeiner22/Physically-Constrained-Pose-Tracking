@@ -56,3 +56,4 @@ class PoseTemporal(nn.Module):
         out, _ = self.temporal(feats)          # (B, T, hidden)
         preds = self.head(out)                 # (B, T, out_dim)
         return preds
+    

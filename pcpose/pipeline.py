@@ -91,3 +91,4 @@ class PosePipeline(nn.Module):
             for t in range(y_seq.shape[0]):
                 outs.append(self.tracker(y_seq[t:t+1]))
             return torch.cat(outs, dim=0)              # (T, 4)
+        

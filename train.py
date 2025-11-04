@@ -4,8 +4,6 @@ import argparse
 import numpy as np
 import torch
 import torch.optim as optim
-
-
 from pcpose.config import CLIConfig
 from pcpose.data import load_video_frames, to_tensor_batch
 from pcpose.pipeline import PosePipeline
@@ -47,9 +45,7 @@ def main():
         max_frames=args.max_frames,
     )
 
-
     os.makedirs(cfg.outdir, exist_ok=True)
-    
     
     # Load frames
     if cfg.video_path is None:
@@ -59,9 +55,7 @@ def main():
     else:
         frames_np = load_video_frames(cfg.video_path, max_frames=cfg.max_frames)
     
-    
     batch = to_tensor_batch(frames_np, cfg.device)
-    
     
     # Create model
     model = PosePipeline(cfg.scenario, cfg.device,
@@ -73,17 +67,14 @@ def main():
     model.weights.lambda_phys = cfg.lambda_phys
     model.weights.lambda_smooth = cfg.lambda_smooth
     
-    
     opt = optim.Adam(model.parameters(), lr=cfg.lr)
     y_gt = None # Optional: provide tensor of shape (T,4)
-    
     
     # Train loop
     for epoch in range(1, cfg.epochs + 1):
         tr_logs = train_one_epoch(model, batch, y_gt, opt)
         ev_logs = evaluate(model, batch, y_gt)
         print(f"Epoch {epoch:03d} | train: {tr_logs} | eval: {ev_logs}")
-    
     
         if epoch % cfg.save_every == 0:
             ckpt = {
@@ -99,7 +90,6 @@ def main():
     with torch.no_grad():
         y_all = model.predict_and_smooth(batch.frames) # (T,4)
         xy = y_all[:, :2].detach().cpu().numpy()
-    
     
     out_video = os.path.join(cfg.outdir, "viz", "overlay.mp4")
     render_overlay_sequence(frames_np, xy, out_video)

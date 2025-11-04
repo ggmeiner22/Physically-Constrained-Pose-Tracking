@@ -3,8 +3,6 @@ import torch
 import torch.nn as nn
 
 
-
-
 class TinyBackbone(nn.Module):
     """Very small CNN placeholder. Replace with ViT/OpenPose/keypoints regressor."""
     def __init__(self):

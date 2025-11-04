@@ -7,8 +7,6 @@ from .data import FrameBatch
 from .losses import total_loss
 
 
-
-
 def _train_eval_sequence(model: PosePipeline,
                          batch: FrameBatch,
                          y_gt: Optional[torch.Tensor],

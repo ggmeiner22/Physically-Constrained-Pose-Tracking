@@ -5,8 +5,6 @@ from .config import PhysicsParams, LossWeights
 from .physics import physics_penalty
 
 
-
-
 def total_loss(
     y_pred_t: torch.Tensor, # (B,4) -> [x,y,vx,vy]
     y_pred_t_prev: Optional[torch.Tensor],
