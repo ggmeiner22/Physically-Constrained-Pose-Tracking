@@ -48,7 +48,7 @@ make dev
 ```
 make train
 ```
-> By default --MODEL=temporal, VIDEO=datasets/sample.mp4 and SCEN=hanging
+> By default --MODEL=temporal, VIDEO=datasets/sample.mp4, and SCEN=hanging
 
   6. Render EKF vs RAW comparison
 ```
