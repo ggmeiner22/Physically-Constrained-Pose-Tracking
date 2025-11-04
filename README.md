@@ -31,7 +31,7 @@ macOS / Linux (recommended)
 ```
 python3 --version    
 ```
->  Use 3.10 or 3.11
+>  Use 3.10+
 
   2. Open a terminal in your project folder
   3. Create the venv + install deps
