@@ -1,22 +1,15 @@
 from __future__ import annotations
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
 # We import torchvision lazily to avoid hard version pinning issues.
 def _resnet18_backbone(pretrained: bool = True) -> nn.Module:
     try:
-        import torchvision.models as models
-        # Handle both old and new torchvision weights APIs
-        try:
-            weights = models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
-            net = models.resnet18(weights=weights)
-        except Exception:
-            net = models.resnet18(pretrained=pretrained)
-    except Exception as e:
-        raise RuntimeError(
-            "torchvision is required for PoseTemporal (ResNet18 backbone). "
-            "Install with `pip install torchvision`."
-        ) from e
+        weights = models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+        net = models.resnet18(weights=weights)
+    except Exception:
+        net = models.resnet18(pretrained=pretrained)
     # Strip classification head; keep global pooled 512-dim feature
     net.fc = nn.Identity()
     return net
