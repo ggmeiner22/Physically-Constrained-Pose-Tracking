@@ -65,60 +65,61 @@ class EKFTracker:
         self.P: Optional[torch.Tensor] = None # (4,4)
 
 
-def _to_device(self, device: torch.device):
-    self.I = self.I.to(device)
-    self.F = self.F.to(device)
-    self.Q = self.Q.to(device)
-    self.H = self.H.to(device)
-    self.R = self.R.to(device)
-    if self.x is not None:
-        self.x = self.x.to(device)
-    if self.P is not None:
-        self.P = self.P.to(device)
-
-
-def reset(self, init_state: torch.Tensor, init_cov: float = 10.0):
-    """init_state: (4,) tensor"""
-    self.x = init_state.clone()
-    self.P = torch.eye(4, device=self.x.device) * init_cov
-
-
-def predict(self):
-    assert self.x is not None and self.P is not None
-    # gravity control vector approximated as u = [0, 0, 0, g*dt]
-    u = torch.tensor([0.0, 0.0, 0.0, self.cfg.gravity * self.cfg.dt], device=self.x.device)
-    self.x = self.F @ self.x + u
-    self.P = self.F @ self.P @ self.F.T + self.Q
-
-
-def update(self, z: torch.Tensor):
-    assert self.x is not None and self.P is not None
-    # z shape: (2,) for position-only or (4,) if using velocity also
-    H = self.H
-    R = self.R
-    y = z - (H @ self.x)
-    S = H @ self.P @ H.T + R
-    K = self.P @ H.T @ torch.linalg.inv(S)
-    self.x = self.x + K @ y
-    self.P = (self.I - K @ H) @ self.P
-
-
-def step(self, meas_xyvxvy: torch.Tensor) -> torch.Tensor:
-    """meas_xyvxvy: (4,) measurement from backbone; we may drop velocity if configured.
-    Returns filtered state (4,).
-    """
-    device = meas_xyvxvy.device
-    self._to_device(device)
-    if self.x is None:
-        # initialize from first measurement
-        if self.cfg.use_velocity_measurement:
-            self.reset(meas_xyvxvy.detach(), init_cov=25.0)
-        else:
-            m = meas_xyvxvy.detach()
-            init = torch.tensor([m[0], m[1], 0.0, 0.0], device=device)
-            self.reset(init, init_cov=25.0)
+    def _to_device(self, device: torch.device):
+        self.I = self.I.to(device)
+        self.F = self.F.to(device)
+        self.Q = self.Q.to(device)
+        self.H = self.H.to(device)
+        self.R = self.R.to(device)
+        if self.x is not None:
+            self.x = self.x.to(device)
+        if self.P is not None:
+            self.P = self.P.to(device)
+    
+    
+    def reset(self, init_state: torch.Tensor, init_cov: float = 10.0):
+        """init_state: (4,) tensor"""
+        self.x = init_state.clone()
+        self.P = torch.eye(4, device=self.x.device) * init_cov
+    
+    
+    def predict(self):
+        assert self.x is not None and self.P is not None
+        # gravity control vector approximated as u = [0, 0, 0, g*dt]
+        u = torch.tensor([0.0, 0.0, 0.0, self.cfg.gravity * self.cfg.dt], device=self.x.device)
+        self.x = self.F @ self.x + u
+        self.P = self.F @ self.P @ self.F.T + self.Q
+    
+    
+    def update(self, z: torch.Tensor):
+        assert self.x is not None and self.P is not None
+        # z shape: (2,) for position-only or (4,) if using velocity also
+        H = self.H
+        R = self.R
+        y = z - (H @ self.x)
+        S = H @ self.P @ H.T + R
+        K = self.P @ H.T @ torch.linalg.inv(S)
+        self.x = self.x + K @ y
+        self.P = (self.I - K @ H) @ self.P
+    
+    
+    def step(self, meas_xyvxvy: torch.Tensor) -> torch.Tensor:
+        """meas_xyvxvy: (4,) measurement from backbone; we may drop velocity if configured.
+        Returns filtered state (4,).
+        """
+        device = meas_xyvxvy.device
+        self._to_device(device)
+        if self.x is None:
+            # initialize from first measurement
+            if self.cfg.use_velocity_measurement:
+                self.reset(meas_xyvxvy.detach(), init_cov=25.0)
+            else:
+                m = meas_xyvxvy.detach()
+                init = torch.tensor([m[0], m[1], 0.0, 0.0], device=device)
+                self.reset(init, init_cov=25.0)
+            return self.x
+        self.predict()
+        z = meas_xyvxvy if self.cfg.use_velocity_measurement else meas_xyvxvy[:2]
+        self.update(z)
         return self.x
-    self.predict()
-    z = meas_xyvxvy if self.cfg.use_velocity_measurement else meas_xyvxvy[:2]
-    self.update(z)
-    return self.x
+    
