@@ -97,22 +97,13 @@ The `.npy` files contains a Numpy array of shape `(N, 16)`, where `N` is
 the number of frames in the corresponding `.mp4` video, and contains
 the following information about the object of interest for each frame:
 
-0. X Position 
-1. Y Position
-2. Z Position
-3. X Rotation
-4. Y Rotation
-5. Z Rotation
-6. X Velocity
-7. Y Velocity
-8. Z Velocity
-9. X Angular Velocity
-10. Y Angular Velocity
-11. Z Angular Velocity
-12. Bounding Box X Minimum
-13. Bounding Box Y Minimum
-14. Bounding Box X Maximum
-15. Bounding Box Y Maximum
+```
+[x_position, y_position, z_position,
+ x_rotation, y_rotation, z_rotation,
+ x_velocity, y_velocity, z_velocity,
+ x_angular_velocity, y_angular_velocity, z_angular_velocity,
+ bounding_box_x_min, bounding_box_y_min, bounding_box_x_max, bounding_bax_y_max]
+```
 
 All positional and rotational information is relative to the camera's coordinate frame.
 The bounding box values are in pixels, where the top left corner of the image frame is
