@@ -2,7 +2,7 @@
 PY ?= python3
 VENV ?= .venv
 ACT := . $(VENV)/bin/activate
-VIDEO ?= datasets/marble-on-track-sim-1.mp4
+VIDEO ?= datasets/marble/marble-on-track-sim-1.mp4
 SCEN ?= sliding
 
 .PHONY: venv dev train viz freeze clean
