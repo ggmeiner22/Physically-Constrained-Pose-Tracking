@@ -14,9 +14,9 @@ def _train_eval_sequence(model: PosePipeline,
                          opt: Optional[optim.Optimizer]) -> Dict[str, float]:
     """
     Runs one pass over the whole sequence at once if the backbone supports sequences.
-    Otherwise falls back to per-frame.
+    Otherwise falls back to per-frame. In the sequence case we accumulate loss over
+    all timesteps and do a single backward() to avoid 'backward through graph twice'.
     """
-    mode = "train" if is_train else "eval"
     if is_train:
         model.train()
     else:
@@ -27,34 +27,48 @@ def _train_eval_sequence(model: PosePipeline,
     frames = batch.frames  # (T, C, H, W)
     T = frames.shape[0]
 
-    # If backbone expects a sequence, do one forward for all T
+    # Sequence-capable backbone: one forward, accumulate losses, single backward
     if getattr(model.backbone, "expects_sequence", False):
         x_in = frames.unsqueeze(0)               # (1, T, C, H, W)
         y_seq = model.backbone(x_in).squeeze(0)  # (T, 4)
+
         y_prev = None
+        if is_train:
+            assert opt is not None
+            opt.zero_grad(set_to_none=True)
+            L_total = 0.0
+
         for t in range(T):
             y_t = y_seq[t:t+1]
             gt_t = y_gt[t:t+1] if y_gt is not None else None
-            L, logs = total_loss(y_t, y_prev, model.scenario, model.params, model.weights, gt_t)
+            L_t, logs = total_loss(y_t, y_prev, model.scenario, model.params, model.weights, gt_t)
+
             if is_train:
-                opt.zero_grad(set_to_none=True)
-                L.backward()
-                opt.step()
-            y_prev = y_t.detach()
+                L_total = L_total + L_t
+            y_prev = y_t  # keep graph for next timestep (do not detach here)
+
             for k, v in logs.items():
                 logs_accum[k] += float(v.item())
+
+        if is_train:
+            L_total.backward()
+            opt.step()
+
     else:
-        # Per-frame pass (original behavior)
+        # Per-frame path: each step has its own graph; backward each time is fine
         y_prev = None
         for t in range(T):
             x_t = frames[t:t+1]                  # (1, C, H, W)
             y_t = model(x_t)                     # (1, 4)
             gt_t = y_gt[t:t+1] if y_gt is not None else None
             L, logs = total_loss(y_t, y_prev, model.scenario, model.params, model.weights, gt_t)
+
             if is_train:
+                assert opt is not None
                 opt.zero_grad(set_to_none=True)
                 L.backward()
                 opt.step()
+
             y_prev = y_t.detach()
             for k, v in logs.items():
                 logs_accum[k] += float(v.item())
