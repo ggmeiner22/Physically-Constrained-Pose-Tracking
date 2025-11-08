@@ -15,8 +15,11 @@ venv:
 dev:
 > $(ACT) && pip install -e .
 
+manifest:
+> $(ACT) && python tools/gen_manifest.py --root datasets --outdir data
+
 train:
-> $(ACT) && python train.py --model temporal --scenario $(SCEN) --video_path $(VIDEO)
+> $(ACT) && python train.py --model temporal --train_manifest data/manifest_train.csv --val_manifest data/manifest_val.csv --test_manifest data/manifest_test.csv --epochs 10 --batch_size 4 --clip_len 32
 
 viz:
 > $(ACT) && python tools/visualize_ekf_vs_raw.py --scenario $(SCEN) --video_path $(VIDEO)

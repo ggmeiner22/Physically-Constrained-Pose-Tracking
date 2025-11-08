@@ -1,0 +1,2 @@
+path,scenario,anchor_x,anchor_y,cable_length,slide_y,mu_slide,pendulum_damping
+datasets/marble/test/marble-on-track-sim-15.mp4,sliding,,,,128,0.5,
