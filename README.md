@@ -44,13 +44,18 @@ make venv
 make dev
 ```
 
-  5. Run a quick training
+  5. Create Data file for the model
+```
+make manifest
+```
+
+  6.  Train the model on the data
 ```
 make train
 ```
 > By default --MODEL=temporal, VIDEO=datasets/marble-on-track-sim-1.mp4, and SCEN=sliding
 
-  6. Render EKF vs RAW comparison
+  7. Render EKF vs RAW comparison
 ```
 make viz
 ```
@@ -60,7 +65,7 @@ make train MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
 make viz   VIDEO=/path/to/your.mp4 SCEN=sliding
 ```
 
-  7. Freeze the environment (optional)
+  8. Freeze the environment (optional)
 ```
 make freeze
 ```   
