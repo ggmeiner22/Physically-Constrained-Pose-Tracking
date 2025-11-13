@@ -1,3 +1,5 @@
 path,scenario,anchor_x,anchor_y,cable_length,slide_y,mu_slide,pendulum_damping
 datasets/marble/val/marble-on-track-sim-13.mp4,sliding,,,,128,0.5,
 datasets/marble/val/marble-on-track-sim-14.mp4,sliding,,,,128,0.5,
+datasets/pendulum/val/pendulum-sim-13.mp4,hanging,128,0,,,,0.05
+datasets/pendulum/val/pendulum-sim-14.mp4,hanging,128,0,,,,0.05
