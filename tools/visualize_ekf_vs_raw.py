@@ -31,7 +31,7 @@ def main():
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
 
 
-    frames_np = load_video_frames(args.video_path, max_frames=args.max_frames)
+    frames_np = load_video_frames(args.video_path, max_frames=args.max_frames, resize=(224, 224))
     if frames_np.shape[0] == 0:
         raise RuntimeError("No frames loaded.")
     T, H, W, _ = frames_np.shape
@@ -43,10 +43,14 @@ def main():
 
     with torch.no_grad():
         # Raw backbone predictions (no temporal filter)
-        y_raw = model.forward(batch.frames) # (T,4)
+        x_seq = batch.frames.unsqueeze(0)           # (1, T, C, H, W)
+        y_raw = model.backbone(x_seq).squeeze(0)    # (T, 4)
         xy_raw = y_raw[:, :2].detach().cpu().numpy()
         # EKF-smoothed predictions
-        y_ekf = model.predict_and_smooth(batch.frames) # (T,4)
+        try:
+            y_ekf = model.predict_and_smooth(x_seq).squeeze(0)   # (T,4)
+        except Exception:
+            y_ekf = model.predict_and_smooth(batch.frames)       # (T,4)
         xy_ekf = y_ekf[:, :2].detach().cpu().numpy()
 
     # Build a side-by-side canvas for comparison
