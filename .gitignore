@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# LARGE FILES
+/data/marble/
+/data/pendulum/
+/data/drop/
