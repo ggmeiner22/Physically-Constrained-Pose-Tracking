@@ -34,41 +34,53 @@ python3 --version
 >  Use 3.10+
 
   2. Open a terminal in your project folder
-  3. Create the venv + install deps
+  3. Create the virtual environment and install requirements:
 ```
-make venv
-```
-
-  4. (Optional) Editable install for imports
-```
-make dev
+make venv 
 ```
 
-  5. Create Data file for the model
+  4. Install the project in editable mode:
+```
+Run: make dev 
+```
+
+  5. Generate data manifests:
 ```
 make manifest
 ```
 
-  6.  Train the model on the data
+  6. Train the detector:
 ```
-make train
-```
-> By default --MODEL=temporal, VIDEO=datasets/marble-on-track-sim-1.mp4, and SCEN=sliding
-
-  7. Render EKF vs RAW comparison
-```
-make viz
-```
-> Want to point at a different model, video, or scenario?
-```
-make train MODEL=tiny VIDEO=/path/to/your.mp4 SCEN=sliding
-make viz   VIDEO=/path/to/your.mp4 SCEN=sliding
+make traindet
 ```
 
-  8. Freeze the environment (optional)
+  7. Train the position model:
 ```
-make freeze
-```   
+make trainpos 
+```
+
+  8. Train the temporal / main model:
+```
+make train    # runs train.py using the CSV manifests
+```
+
+  9. Run the pose model on clips (requires detector & position checkpoints):
+```
+make runclips #runs run_pose_model_on_clips.py; provide detector_ckpt and position_ckpt
+```
+  10. Visualize results:
+```
+  make viz
+  make viz-one
+```
+11. Optional maintenance:
+
+Lock deps: 
+```make freeze 
+```
+Clean workspace: 
+```make clean
+```
 
 Windows options
   1. Install Git for Windows (includes Git Bash).
