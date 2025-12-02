@@ -76,10 +76,12 @@ make runclips #runs run_pose_model_on_clips.py; provide detector_ckpt and positi
 11. Optional maintenance:
 
 Lock deps: 
-```make freeze 
+```
+make freeze 
 ```
 Clean workspace: 
-```make clean
+```
+make clean
 ```
 
 Windows options
