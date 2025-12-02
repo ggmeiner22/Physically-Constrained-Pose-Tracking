@@ -23,7 +23,7 @@ def build_args() -> argparse.Namespace:
     p.add_argument("--batch_size", type=int, default=32)
     p.add_argument("--val_split", type=float, default=0.1)
     p.add_argument("--lr", type=float, default=1e-4)
-    p.add_argument("--num_workers", type=int, default=4)
+    p.add_argument("--num_workers", type=int, default=0)
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--save_every", type=int, default=5)
@@ -35,6 +35,7 @@ def main() -> None:
     os.makedirs(args.outdir, exist_ok=True)
 
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    use_pin = device != "cpu"
     print(f"[train_detector] Using device: {device}")
 
     # Simple HWC uint8 -> CHW float32 [0,1]
@@ -54,14 +55,14 @@ def main() -> None:
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        pin_memory=True,
+        pin_memory=use_pin,
     )
     val_loader = DataLoader(
         val_ds,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=True,
+        pin_memory=use_pin,
     )
 
     model = BoundingBoxNet(pretrained=True).to(device)
