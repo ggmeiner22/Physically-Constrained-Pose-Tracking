@@ -1,107 +1,97 @@
-#!/usr/bin/env python3
 from __future__ import annotations
-import argparse, csv, re
+
 from pathlib import Path
+import json
+import re
 
-SCEN_BY_NAME = [
-    (re.compile(r"(pendulum|hang|rope)", re.I), "hanging"),
-    (re.compile(r"(marble|track|slide)", re.I), "sliding"),
-    (re.compile(r"(drop|fall)", re.I), "dropping"),
-]
+from pcpose.data.preprocess import build_manifest
 
-def guess_scenario(path: str) -> str:
-    p = path.lower()
-    for pat, scen in SCEN_BY_NAME:
-        if pat.search(p):
-            return scen
-    # also check immediate parent folder name as a fallback
-    parts = Path(path).parts
-    for s in parts[::-1]:
-        for pat, scen in SCEN_BY_NAME:
-            if pat.search(s):
-                return scen
-    return "sliding"
 
-def write_manifest(rows, out_path: Path):
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=[
-            "path","scenario","anchor_x","anchor_y","cable_length","slide_y","mu_slide","pendulum_damping"
-        ])
-        w.writeheader()
-        w.writerows(rows)
-    print(f"Wrote {out_path} with {len(rows)} items")
+SCENARIOS = ["drop", "marble", "pendulum"]
+SPLITS = ["train", "val", "test"]
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--root", type=str, default="datasets")
-    ap.add_argument("--outdir", type=str, default="data")
-    ap.add_argument("--exts", type=str, default=".mp4,.mov,.avi,.mkv")
-    ap.add_argument("--default-slide-y", type=str, default="128")
-    ap.add_argument("--default-mu-slide", type=str, default="0.5")
-    ap.add_argument("--default-cable-length", type=str, default="")
-    ap.add_argument("--default-anchor", type=str, default="128,0")
-    ap.add_argument("--default-pendulum-damping", type=str, default="0.05")
-    args = ap.parse_args()
 
-    root = Path(args.root)
-    exts = {e.strip().lower() for e in args.exts.split(",") if e.strip()}
+def find_matching_npy(mp4_path: Path) -> Path:
+    """
+    Given an mp4 like 'marble-on-track-sim-15.mp4',
+    find the corresponding .npy in the same directory.
 
-    train_rows, val_rows, test_rows = [], [], []
-    for p in root.rglob("*"):
-        if not p.is_file() or p.suffix.lower() not in exts:
+    We look for the 'sim-<number>' pattern and match any .npy
+    that also contains that tag.
+    """
+    stem = mp4_path.stem  # e.g. 'marble-on-track-sim-15'
+    m = re.search(r"sim-\d+", stem)
+    if not m:
+        raise RuntimeError(f"Could not find 'sim-<id>' pattern in {stem}")
+
+    tag = m.group(0)  # 'sim-15'
+
+    candidates = list(mp4_path.parent.glob(f"*{tag}*.npy"))
+    if len(candidates) == 0:
+        raise FileNotFoundError(f"No .npy found in {mp4_path.parent} matching tag '{tag}'")
+    if len(candidates) > 1:
+        raise RuntimeError(
+            f"Multiple .npy files in {mp4_path.parent} matching tag '{tag}': {candidates}"
+        )
+    return candidates[0]
+
+
+def build_split_manifest(root: Path, split: str, out_root: Path) -> None:
+    """
+    Traverse datasets/<scenario>/<split>/ for all scenarios and
+    aggregate into a single JSON manifest for this split.
+
+    Writes: out_root / f"manifest_{split}.json"
+    """
+    all_records = []
+
+    for scenario in SCENARIOS:
+        split_dir = root / scenario / split
+        if not split_dir.exists():
+            print(f"[WARN] Missing directory {split_dir}, skipping scenario '{scenario}' for split '{split}'")
             continue
-        scen = guess_scenario(str(p))
-        # defaults per scenario
-        anchor_x = anchor_y = ""
-        cable_length = ""
-        slide_y = ""
-        mu_slide = ""
-        pendulum_damping = ""
-        if scen == "sliding":
-            slide_y = args.default_slide-y if hasattr(args, "default_slide-y") else args.default_slide_y  # robustness
-            slide_y = args.default_slide_y
-            mu_slide = args.default_mu_slide
-        elif scen == "hanging":
-            cable_length = args.default_cable_length
+
+        print(f"[INFO] Processing scenario='{scenario}', split='{split}' in {split_dir}")
+
+        for mp4 in split_dir.glob("*.mp4"):
             try:
-                ax, ay = (s.strip() for s in args.default_anchor.split(","))
-                anchor_x, anchor_y = ax, ay
-            except Exception:
-                pass
-            pendulum_damping = args.default_pendulum_damping
+                npy = find_matching_npy(mp4)
+            except Exception as e:
+                print(f"  [WARN] Skipping {mp4.name}: {e}")
+                continue
 
-        row = {
-            "path": p.as_posix(),
-            "scenario": scen,
-            "anchor_x": anchor_x,
-            "anchor_y": anchor_y,
-            "cable_length": cable_length,
-            "slide_y": slide_y,
-            "mu_slide": mu_slide,
-            "pendulum_damping": pendulum_damping,
-        }
+            # Where to put extracted frames and per-video manifest
+            frames_dir = out_root / scenario / split / f"{mp4.stem}_frames"
+            per_video_manifest = out_root / scenario / split / f"{mp4.stem}_manifest.json"
 
-        pl = p.as_posix().lower()
-        if "/train/" in pl:
-            train_rows.append(row)
-        elif "/val/" in pl:
-            val_rows.append(row)
-        elif "/test/" in pl:
-            test_rows.append(row)
-        else:
-            # if no split in path, default to train
-            train_rows.append(row)
+            frames_dir.parent.mkdir(parents=True, exist_ok=True)
 
-    # Stable ordering
-    train_rows.sort(key=lambda r: r["path"])
-    val_rows.sort(key=lambda r: r["path"])
-    test_rows.sort(key=lambda r: r["path"])
+            print(f"   - {mp4.name}  +  {npy.name}")
+            build_manifest(mp4, npy, per_video_manifest, frames_dir)
 
-    outdir = Path(args.outdir)
-    write_manifest(train_rows, outdir / "manifest_train.csv")
-    write_manifest(val_rows,   outdir / "manifest_val.csv")
-    write_manifest(test_rows,  outdir / "manifest_test.csv")
+            # Append per-video records to combined list
+            with per_video_manifest.open("r") as f:
+                recs = json.load(f)
+                # (optional) annotate with scenario if you ever need it
+                for r in recs:
+                    r["scenario"] = scenario
+                all_records.extend(recs)
+
+    combined_path = out_root / f"manifest_{split}.json"
+    combined_path.parent.mkdir(parents=True, exist_ok=True)
+    with combined_path.open("w") as f:
+        json.dump(all_records, f, indent=2)
+
+    print(f"[OK] Wrote combined {split} manifest with {len(all_records)} records → {combined_path}")
+
+
+def main() -> None:
+    datasets_root = Path("datasets")
+    out_root = Path("data")
+
+    for split in SPLITS:
+        build_split_manifest(datasets_root, split, out_root)
+
 
 if __name__ == "__main__":
     main()

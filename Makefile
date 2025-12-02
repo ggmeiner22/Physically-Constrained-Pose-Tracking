@@ -16,10 +16,30 @@ dev:
 > $(ACT) && pip install -e .
 
 manifest:
-> $(ACT) && python tools/gen_manifest.py --root datasets --outdir data
+> $(ACT) && python tools/gen_manifest.py
 
 train:
 > $(ACT) && python train.py --model temporal --train_manifest data/manifest_train.csv --val_manifest data/manifest_val.csv --test_manifest data/manifest_test.csv --epochs 10 --batch_size 4 --clip_len 32
+
+traindet:
+> $(ACT) && python train_detector.py --manifest data/manifest_train.json
+
+trainpos:
+> $(ACT) && python train_position.py --manifest data/manifest_train.json
+
+runclips:
+> $(ACT) && python run_pose_model_on_clips.py \
+  --manifest path/to/your/video_manifest.csv \
+  --scenario hanging \
+  --detector_ckpt outputs/detector/best_detector.pt \
+  --position_ckpt outputs/position/best_position.pt
+
+viz-one:
+> $(ACT) && python tools/viz_one_sim.py \
+  --video datasets/marble/train/marble-on-track-sim-15.mp4 \
+  --info datasets/marble/train/marble-on-track-info-sim-15.npy \
+  --draw_pos \
+  --scale 0.7
 
 viz:
 > $(ACT) && python tools/visualize_ekf_vs_raw.py --scenario $(SCEN) --video_path $(VIDEO)
