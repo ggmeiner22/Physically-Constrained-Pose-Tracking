@@ -84,28 +84,7 @@ Clean workspace:
 make clean
 ```
 
-Windows options
-  1. Install Git for Windows (includes Git Bash).
-  2. Open Git Bash in the project folder.
-  3. Run the same commands:
-```
-make venv
-make dev
-make train VIDEO=datasets/sample.mp4 SCEN=hanging
-```
-
 ---
-
-## Verification
-After make train, you should see epoch logs and an overlay video at:
-```
-outputs/runs/viz/overlay.mp4
-```
-
-After make viz, you should see:
-```
-outputs/runs/viz/ekf_vs_raw.png
-```
 
 ## Data Format
 
