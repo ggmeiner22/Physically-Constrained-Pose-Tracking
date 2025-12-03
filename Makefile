@@ -19,20 +19,34 @@ manifest:
 > $(ACT) && python tools/gen_manifest.py
 
 train:
-> $(ACT) && python train.py --model temporal --train_manifest data/manifest_train.csv --val_manifest data/manifest_val.csv --test_manifest data/manifest_test.csv --epochs 10 --batch_size 4 --clip_len 32
+> $(ACT) && python train.py \
+  --model two_stage \
+  --detector_ckpt outputs/detector/best_detector.pt \
+  --position_ckpt outputs/position/best_position.pt \
+  --train_manifest data/manifest_train.json \
+  --val_manifest   data/manifest_val.json \
+  --scenario hanging \
+  --filter ekf
 
 traindet:
-> $(ACT) && python train_detector.py --manifest data/manifest_train.json
+> $(ACT) && python train_detector.py \
+  --manifest data/manifest_train.json \
+  --val_manifest data/manifest_val.json \
+  --outdir outputs/detector
 
 trainpos:
-> $(ACT) && python train_position.py --manifest data/manifest_train.json
+> $(ACT) && python train_position.py \
+  --manifest data/manifest_train.json \
+  --val_manifest data/manifest_val.json \
+  --outdir outputs/position
 
 runclips:
 > $(ACT) && python run_pose_model_on_clips.py \
-  --manifest path/to/your/video_manifest.csv \
-  --scenario hanging \
+  --manifest data/manifest_test.json \
   --detector_ckpt outputs/detector/best_detector.pt \
-  --position_ckpt outputs/position/best_position.pt
+  --position_ckpt outputs/position/best_position.pt \
+  --filter ekf
+
 
 viz-one:
 > $(ACT) && python tools/viz_one_sim.py \

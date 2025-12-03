@@ -9,6 +9,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from tqdm.auto import tqdm
 
+from pcpose.models.two_stage_backbone import TwoStageBackbone
+from pcpose.pipeline import _positions_to_measurements
 from pcpose.pipeline import PosePipeline
 from pcpose.losses import total_loss
 from pcpose.data_video_dataset import VideoClipDataset
@@ -34,7 +36,7 @@ def build_args() -> argparse.Namespace:
     p.add_argument("--filter", type=str, choices=["ekf", "ema"], default="ekf")
     p.add_argument("--use_vel_meas", action="store_true")
 
-    p.add_argument("--model", type=str, choices=["temporal", "tiny"], default="temporal")
+    p.add_argument("--model", type=str, choices=["temporal", "tiny", "two_stage"], default="temporal")
     p.add_argument("--batch_size", type=int, default=4)
     p.add_argument("--clip_len", type=int, default=32)
     p.add_argument("--num_workers", type=int, default=2)
@@ -42,7 +44,10 @@ def build_args() -> argparse.Namespace:
     p.add_argument("--test_split", type=float, default=0.1)
     p.add_argument("--seed", type=int, default=42)
 
-    # NEW: explicit split manifests
+    p.add_argument("--detector_ckpt", type=str, default=None)
+    p.add_argument("--position_ckpt", type=str, default=None)
+
+    # Explicit split manifests
     p.add_argument("--train_manifest", type=str, default=None)
     p.add_argument("--val_manifest",   type=str, default=None)
     p.add_argument("--test_manifest",  type=str, default=None)
@@ -114,10 +119,23 @@ def train_epoch_seq_batches(model: PosePipeline, loader, opt: optim.Optimizer) -
         x = batch["frames"].to(model.device)  # (B,T,C,H,W)
         B, T = x.shape[:2]
 
-        if getattr(model.backbone, "expects_sequence", False):
+        if isinstance(model.backbone, TwoStageBackbone):
+            # two-stage backbone returns positions (B,T,3)
+            pos_bt = model.backbone(x)  # (B,T,3)
+
+            # Convert each sequence to [x,y,vx,vy] using the same helper as predict_and_smooth
+            y_list = []
+            for i in range(B):
+                pos_seq = pos_bt[i]  # (T,3)
+                y_seq = _positions_to_measurements(pos_seq, dt=model.params.dt)  # (T,4)
+                y_list.append(y_seq)
+
+            y_bt = torch.stack(y_list, dim=0)  # (B,T,4)
+        elif getattr(model.backbone, "expects_sequence", False):
             y_bt = model.backbone(x)  # (B,T,4)
         else:
             y_bt = torch.stack([model.backbone(x[:, t]) for t in range(T)], dim=1)  # (B,T,4)
+
 
         opt.zero_grad(set_to_none=True)
         L_total = torch.tensor(0.0, device=model.device)
@@ -172,10 +190,19 @@ def eval_epoch_seq_batches(model: PosePipeline, loader) -> Dict[str, float]:
     for batch in tqdm(loader, desc="Eval", leave=False):
         x = batch["frames"].to(model.device)
         B, T = x.shape[:2]
-        if getattr(model.backbone, "expects_sequence", False):
+        if isinstance(model.backbone, TwoStageBackbone):
+            pos_bt = model.backbone(x)  # (B,T,3)
+            y_list = []
+            for i in range(B):
+                pos_seq = pos_bt[i]
+                y_seq = _positions_to_measurements(pos_seq, dt=model.params.dt)
+                y_list.append(y_seq)
+            y_bt = torch.stack(y_list, dim=0)  # (B,T,4)
+        elif getattr(model.backbone, "expects_sequence", False):
             y_bt = model.backbone(x)
         else:
             y_bt = torch.stack([model.backbone(x[:, t]) for t in range(T)], dim=1)
+
 
         for i in range(B):
             scenario_i = batch["scenarios"][i]
@@ -220,10 +247,15 @@ def main():
 
     # Build model
     model = PosePipeline(
-        scenario=args.scenario, device=device,
-        filter_type=args.filter, use_vel_meas=args.use_vel_meas,
-        model_type=args.model
+        scenario=args.scenario,
+        device=device,
+        filter_type=args.filter,
+        use_vel_meas=args.use_vel_meas,
+        model_type=args.model,
+        detector_ckpt=args.detector_ckpt,
+        position_ckpt=args.position_ckpt,
     )
+
     model.weights.lambda_phys = args.lambda_phys
     model.weights.lambda_smooth = args.lambda_smooth
 

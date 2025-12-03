@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from .models.backbone import TinyBackbone
+from .models.two_stage_backbone import TwoStageBackbone
 from .config import PhysicsParams, LossWeights
 from .filtering import SimpleSmoother, EKFTracker, EKFConfig
 
@@ -15,42 +16,31 @@ except Exception:  # noqa: BLE001
 
 
 class PosePipeline(nn.Module):
-    """
-    Wraps the visual backbone (tiny / resnet_temporal) and a temporal filter (EKF / EMA).
-
-    model_type:
-        - "tiny"     -> TinyBackbone (per-frame)
-        - "temporal" -> ResNet18 + GRU (sequence-aware)
-    """
-    def __init__(
-        self,
-        scenario: str,
-        device: str,
-        filter_type: str = "ekf",
-        use_vel_meas: bool = False,
-        model_type: str = "temporal",
-    ) -> None:
+    def __init__(self, scenario: str, device: str, filter_type: str, use_vel_meas: bool, model_type: str = "temporal",
+                 detector_ckpt: str | None = None,
+                 position_ckpt: str | None = None):
         super().__init__()
-        self.scenario = scenario
-        self.params = PhysicsParams()
-        self.weights = LossWeights()
-        self.device = device
-        self.model_type = model_type
-
-        # ---- Visual backbone ----
-        if model_type == "temporal":
+        self.device = torch.device(device)
+        self.filter_type = filter_type
+        self.use_vel_meas = use_vel_meas
+        ...
+        if model_type == "tiny":
+            self.backbone = TinyBackbone().to(self.device)
+        elif model_type == "temporal":
             if PoseTemporal is None:
-                raise RuntimeError(
-                    "PoseTemporal unavailable. Install torchvision and add models/pose_temporal.py."
-                )
-            self.backbone: nn.Module = PoseTemporal(pretrained=True).to(device)
-            # used by train.py to know it can feed (B,T,C,H,W)
-            self.backbone.expects_sequence = True  # type: ignore[attr-defined]
-        elif model_type == "tiny":
-            self.backbone = TinyBackbone().to(device)
-            self.backbone.expects_sequence = False  # type: ignore[attr-defined]
+                raise RuntimeError("PoseTemporal not available, check torchvision install")
+            self.backbone = PoseTemporal(out_dim=4).to(self.device)
+        elif model_type == "two_stage":
+            if detector_ckpt is None or position_ckpt is None:
+                raise ValueError("two_stage model_type requires --detector_ckpt and --position_ckpt")
+            self.backbone = TwoStageBackbone(
+                detector_ckpt=detector_ckpt,
+                position_ckpt=position_ckpt,
+                device=self.device,
+            )
         else:
-            raise ValueError("model_type must be 'temporal' or 'tiny'")
+            raise ValueError(f"Unknown model_type: {model_type}")
+
 
         # ---- Temporal filter ----
         if filter_type == "ekf":
@@ -97,18 +87,23 @@ class PosePipeline(nn.Module):
         T, C, H, W = frames.shape
         device = self.device
 
-        # ---- 1) Run backbone to get raw measurements y_seq (T,4) ----
-        if getattr(self.backbone, "expects_sequence", False):
-            # backbone takes (B,T,C,H,W)
-            y_bt = self.backbone(frames.unsqueeze(0))  # (1, T, 4)
-            y_seq = y_bt[0]                            # (T, 4)
+        # ---- 1) Run backbone ----
+        if isinstance(self.backbone, TwoStageBackbone):
+            # two-stage: returns positions (B,T,3)
+            pos_bt = self.backbone(frames.unsqueeze(0))  # (1,T,3)
+            pos_seq = pos_bt[0]                          # (T,3)
+            y_seq = _positions_to_measurements(pos_seq, dt=self.params.dt)  # (T,4)
+        elif getattr(self.backbone, "expects_sequence", False):
+            # temporal backbones: already output (B,T,4)
+            y_bt = self.backbone(frames.unsqueeze(0))  # (1,T,4)
+            y_seq = y_bt[0]
         else:
-            # backbone is per-frame: loop over time
+            # per-frame backbone: map each frame to (4,)
             ys = []
             for t in range(T):
-                y_t = self.backbone(frames[t : t + 1].to(device))  # (1, 4)
-                ys.append(y_t[0])
-            y_seq = torch.stack(ys, dim=0)  # (T, 4)
+                yt = self.backbone(frames[t : t + 1])  # (1,4)
+                ys.append(yt[0])
+            y_seq = torch.stack(ys, dim=0)             # (T,4)
 
         # ---- 2) Apply temporal filter (EKF or EMA) ----
         outs = []
@@ -126,3 +121,21 @@ class PosePipeline(nn.Module):
                 outs.append(self.tracker(y_seq[t : t + 1]))
 
         return torch.cat(outs, dim=0)  # (T, 4)
+
+
+def _positions_to_measurements(pos_seq: torch.Tensor, dt: float) -> torch.Tensor:
+    """
+    pos_seq: (T,3) or (T,2) positions
+    returns: (T,4) [x, y, vx, vy]
+    """
+    # take only x,y
+    xy = pos_seq[:, :2]                     # (T,2)
+    T = xy.shape[0]
+    v = torch.zeros_like(xy)               # (T,2)
+
+    if T > 1:
+        v[1:] = (xy[1:] - xy[:-1]) / max(dt, 1e-6)
+        v[0] = v[1]                        # copy first velocity for simplicity
+
+    y_seq = torch.cat([xy, v], dim=-1)     # (T,4)
+    return y_seq
