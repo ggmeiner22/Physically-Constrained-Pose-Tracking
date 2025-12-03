@@ -50,8 +50,8 @@ runclips:
 
 viz-one:
 > $(ACT) && python tools/viz_one_sim.py \
-  --video datasets/marble/test/marble-on-track-sim-15.mp4 \
-  --info datasets/marble/test/marble-on-track-info-sim-15.npy \
+  --video datasets/pendulum/test/pendulum-sim-15.mp4 \
+  --info datasets/pendulum/test/pendulum-info-sim-15.npy \
   --draw_pos \
   --scale 0.7
 

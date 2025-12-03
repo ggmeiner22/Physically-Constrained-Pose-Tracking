@@ -39,8 +39,14 @@ def main() -> None:
     print(f"[train_detector] Using device: {device}")
 
     # Simple HWC uint8 -> CHW float32 [0,1]
-    transform = transforms.ToTensor()
-
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        ),
+    ])
+    
     full_ds = DetectorDataset(args.manifest, transform=transform)
 
     n_total = len(full_ds)

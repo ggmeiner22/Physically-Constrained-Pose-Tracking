@@ -40,7 +40,14 @@ def main() -> None:
     print(f"[train_position] Using device: {device}")
 
     # HWC uint8 -> CHW float32 [0,1]
-    transform = transforms.ToTensor()
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        ),
+    ])
+
 
     full_ds = PositionDataset(
         manifest_path=args.manifest,
