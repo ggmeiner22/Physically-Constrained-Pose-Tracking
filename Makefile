@@ -47,7 +47,6 @@ runclips:
   --position_ckpt outputs/position/best_position.pt \
   --filter ekf
 
-
 viz-one:
 > $(ACT) && python tools/viz_one_sim.py \
   --video datasets/pendulum/test/pendulum-sim-15.mp4 \
