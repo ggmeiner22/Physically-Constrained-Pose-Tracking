@@ -25,7 +25,7 @@ train:
   --position_ckpt outputs/position/best_position.pt \
   --train_manifest data/manifest_train.json \
   --val_manifest   data/manifest_val.json \
-  --scenario hanging \
+  --scenario pendulum \
   --filter ekf
 
 traindet:
@@ -56,7 +56,12 @@ viz-one:
   --scale 0.7
 
 viz:
-> $(ACT) && python tools/visualize_ekf_vs_raw.py --scenario $(SCEN) --video_path $(VIDEO)
+> $(ACT) && python tools/visualize_ekf_vs_raw.py \
+  --video_path datasets/pendulum/test/pendulum-sim-15.mp4 \
+  --scenario pendulum \
+  --model two_stage \
+  --detector_ckpt outputs/detector/best_detector.pt \
+  --position_ckpt outputs/position/best_position.pt
 
 freeze:
 > $(ACT) && pip freeze > requirements-lock.txt
