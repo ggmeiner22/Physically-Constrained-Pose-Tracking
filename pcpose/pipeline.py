@@ -16,23 +16,53 @@ except Exception:  # noqa: BLE001
 
 
 class PosePipeline(nn.Module):
-    def __init__(self, scenario: str, device: str, filter_type: str, use_vel_meas: bool, model_type: str = "temporal",
-                 detector_ckpt: str | None = None,
-                 position_ckpt: str | None = None):
+    """
+    Wrapper around the visual backbone + physics/temporal filtering.
+
+    - backbone: TinyBackbone, PoseTemporal, or TwoStageBackbone
+    - params:   PhysicsParams for the current scenario (hanging/sliding/dropping)
+    - weights:  LossWeights used by total_loss()
+    """
+
+    def __init__(
+        self,
+        scenario: str,
+        device: str,
+        filter_type: str,
+        use_vel_meas: bool,
+        model_type: str = "temporal",
+        detector_ckpt: Optional[str] = None,
+        position_ckpt: Optional[str] = None,
+    ):
         super().__init__()
         self.device = torch.device(device)
         self.filter_type = filter_type
         self.use_vel_meas = use_vel_meas
-        ...
+
+        # ---------------------------------------------------------------------
+        # Physics + loss config
+        # ---------------------------------------------------------------------
+        # PhysicsParams typically carries dt, gravity, anchor, cable_length, etc.
+        self.params: PhysicsParams = PhysicsParams.for_scenario(scenario)
+        # LossWeights carries lambda_phys, lambda_smooth, etc.
+        self.weights: LossWeights = LossWeights()
+
+        # ---------------------------------------------------------------------
+        # Backbone selection
+        # ---------------------------------------------------------------------
         if model_type == "tiny":
             self.backbone = TinyBackbone().to(self.device)
+
         elif model_type == "temporal":
             if PoseTemporal is None:
                 raise RuntimeError("PoseTemporal not available, check torchvision install")
+            # PoseTemporal returns (B,T,4)
             self.backbone = PoseTemporal(out_dim=4).to(self.device)
+
         elif model_type == "two_stage":
+            # Two-stage perception: detector + position net
             if detector_ckpt is None or position_ckpt is None:
-                raise ValueError("two_stage model_type requires --detector_ckpt and --position_ckpt")
+                raise ValueError("two_stage model_type requires detector_ckpt and position_ckpt")
             self.backbone = TwoStageBackbone(
                 detector_ckpt=detector_ckpt,
                 position_ckpt=position_ckpt,
@@ -41,23 +71,24 @@ class PosePipeline(nn.Module):
         else:
             raise ValueError(f"Unknown model_type: {model_type}")
 
-
-        # ---- Temporal filter ----
+        # ---------------------------------------------------------------------
+        # Temporal filter config
+        # ---------------------------------------------------------------------
         if filter_type == "ekf":
+            # We only build the EKFTracker inside predict_and_smooth()
+            # but we keep a config here.
             self._filter_cfg = EKFConfig(
-                dt=1/30,
-                gravity=9.81,
+                dt=self.params.dt,
+                gravity=self.params.gravity,
                 use_velocity_measurement=use_vel_meas,
             )
             self.filter_type = "ekf"
-            # We will re-create EKFTracker in predict_and_smooth() to avoid stale state
+            self.tracker = None  # created on demand
         elif filter_type == "ema":
             self.tracker = SimpleSmoother(alpha=0.25)
             self.filter_type = "ema"
         else:
             raise ValueError("filter_type must be 'ekf' or 'ema'")
-
-        self.weights = LossWeights()
 
     # -------------------------------------------------------------------------
     # Core forward: used by training. train.py calls model.backbone(...) directly,
@@ -67,8 +98,12 @@ class PosePipeline(nn.Module):
         """
         For per-frame backbones:
             frames: (B, C, H, W) -> (B, 4)
-        For temporal backbone:
+
+        For temporal backbones:
             frames: (B, T, C, H, W) or (B, C, H, W) -> (B, T, 4) or (B, 4)
+
+        For two_stage backbone:
+            frames: (B, T, C, H, W) or (T, C, H, W) -> (B, T, 3) or (T, 3)
         """
         return self.backbone(frames)
 
@@ -82,25 +117,35 @@ class PosePipeline(nn.Module):
 
             input:  frames (T, C, H, W)
             output: (T, 4) filtered states [x, y, vx, vy]
+
+        - For two_stage backbone:
+            frames -> positions (T,3) -> [x,y,vx,vy] -> EKF/EMA
+
+        - For temporal backbone:
+            frames -> (1,T,4) -> EKF/EMA
+
+        - For per-frame backbone:
+            frames[t] -> (1,4) per frame -> EKF/EMA
         """
         if frames.dim() != 4:
             raise ValueError("predict_and_smooth expects frames of shape (T, C, H, W)")
 
         T, C, H, W = frames.shape
-        device = self.device
 
         # ---- 1) Run backbone ----
         if isinstance(self.backbone, TwoStageBackbone):
             # two-stage: returns positions (B,T,3)
             pos_bt = self.backbone(frames.unsqueeze(0))  # (1,T,3)
             pos_seq = pos_bt[0]                          # (T,3)
-            y_seq = _positions_to_measurements(pos_seq, dt=1/30)  # (T,4)
+            y_seq = _positions_to_measurements(pos_seq, dt=self.params.dt)  # (T,4)
+
         elif getattr(self.backbone, "expects_sequence", False):
             # temporal backbones: already output (B,T,4)
             y_bt = self.backbone(frames.unsqueeze(0))  # (1,T,4)
-            y_seq = y_bt[0]
+            y_seq = y_bt[0]                            # (T,4)
+
         else:
-            # per-frame backbone: map each frame to (4,)
+            # per-frame backbone: map each frame independently to (4,)
             ys = []
             for t in range(T):
                 yt = self.backbone(frames[t : t + 1])  # (1,4)
@@ -114,7 +159,7 @@ class PosePipeline(nn.Module):
             # fresh EKF instance to avoid reusing old state
             tracker = EKFTracker(self._filter_cfg)
             for t in range(T):
-                x_f = tracker.step(y_seq[t])          # (4,)
+                x_f = tracker.step(y_seq[t])           # (4,)
                 outs.append(x_f.unsqueeze(0))
         else:
             # EMA smoother
@@ -127,6 +172,8 @@ class PosePipeline(nn.Module):
 
 def _positions_to_measurements(pos_seq: torch.Tensor, dt: float) -> torch.Tensor:
     """
+    Convert positions into [x, y, vx, vy] measurements.
+
     pos_seq: (T,3) or (T,2) positions
     returns: (T,4) [x, y, vx, vy]
     """
