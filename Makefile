@@ -48,8 +48,7 @@ runclips:
 > $(ACT) && python run_pose_model_on_clips.py \
   --manifest data/manifest_test.json \
   --detector_ckpt outputs/detector/best_detector.pt \
-  --position_ckpt outputs/position/best_position.pt \
-  --filter ekf
+  --position_ckpt outputs/position/best_position.pt
 
 viz-one:
 > $(ACT) && python tools/viz_one_sim.py \
