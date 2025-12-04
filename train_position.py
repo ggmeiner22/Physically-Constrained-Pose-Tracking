@@ -183,9 +183,8 @@ def train_epoch(
     n_batches = 0
 
     for batch in tqdm(loader, desc="Train", leave=False):
-        crops = batch["crop"].to(device)          # (B,3,Hc,Wc)
-        bbox_norm = batch["bbox_norm"].to(device) # (B,4)
-        pos = batch["pos"].to(device)             # (B,3)
+        crops, bbox_norm, pos = batch  # (B,3,Hc,Wc)
+        crops, bbox_norm, pos = crops.to(device), bbox_norm.to(device), pos.to(device)
 
         opt.zero_grad(set_to_none=True)
         pred = model(crops, bbox_norm)            # (B,3)
@@ -215,9 +214,8 @@ def eval_epoch(
     n_batches = 0
 
     for batch in tqdm(loader, desc="Val", leave=False):
-        crops = batch["crop"].to(device)
-        bbox_norm = batch["bbox_norm"].to(device)
-        pos = batch["pos"].to(device)
+        crops, bbox_norm, pos = batch          # (B,3,Hc,Wc)
+        crops, bbox_norm, pos = crops.to(device), bbox_norm.to(device), pos.to(device)
 
         pred = model(crops, bbox_norm)
         loss = criterion(pred, pos)

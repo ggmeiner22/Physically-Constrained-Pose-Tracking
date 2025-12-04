@@ -33,16 +33,16 @@ traindet:
   --manifest data/manifest_train.json \
   --val_manifest data/manifest_val.json \
   --outdir outputs/detector \
-  --batch_size 8 \
-	--num_workers 0
+  --batch_size 2 \
+  --num_workers 4
 
 trainpos:
 > $(ACT) && python train_position.py \
   --manifest data/manifest_train.json \
   --val_manifest data/manifest_val.json \
   --outdir outputs/position \
-  --batch_size 8 \
-	--num_workers 0
+  --batch_size 2 \
+  --num_workers 4
 
 runclips:
 > $(ACT) && python run_pose_model_on_clips.py \
