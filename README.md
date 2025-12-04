@@ -69,15 +69,15 @@ make train
 ```
 make runclips
 ```
-> runs run_pose_model_on_clips.py
+> runs run_pose_model_on_clips.py   
 > provide detector_ckpt and position_ckpt
 
   10. Visualize trajectories:
 ```
   make viz
 ```
-> Currently, not working...
-> To visualize boudning box: Visualize trajectories
+> Currently, not working...   
+> To visualize boudning box: make viz-one
 11. Optional maintenance:
 
 Lock deps: 
