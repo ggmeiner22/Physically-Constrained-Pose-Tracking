@@ -101,7 +101,7 @@ class VideoClipDataset(Dataset):
                 if v not in by_video:
                     out: Dict[str, str] = {}
                     out["path"] = v
-                    out["scenario"] = r.get("scenario", "hanging")
+                    out["scenario"] = r.get("scenario", "pendulum")
                     # Copy physics-related keys if present
                     for k in [
                         "anchor_x",
