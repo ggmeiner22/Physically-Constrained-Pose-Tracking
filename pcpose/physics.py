@@ -29,7 +29,7 @@ def physics_penalty(
         x_expected = xt_prev + vt_prev * params.dt
         penalties.append(((xt - x_expected) ** 2).sum(dim=1))
 
-    if scenario == "hanging":
+    if scenario == "pendulum":
         anchor = torch.tensor(params.anchor, device=xt.device).unsqueeze(0)
         r = xt - anchor
         L = params.cable_length
@@ -52,7 +52,7 @@ def physics_penalty(
         radial_v = (r * vt).sum(dim=1) / (L + 1e-6)
         penalties.append(radial_v ** 2)
 
-    elif scenario == "sliding":
+    elif scenario == "marble":
         penalties.append((xt[:, 1] - params.slide_y).abs())
         # --- Friction cone on flat surface ---
         if vt_prev is not None:

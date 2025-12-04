@@ -14,8 +14,8 @@ def build_args():
     p.add_argument("--video_path", type=str, required=True,
                    help="Input video file (mp4, etc.)")
     p.add_argument("--scenario", type=str,
-                   choices=["hanging", "sliding", "dropping"],
-                   default="hanging")
+                   choices=["pendulum", "sliding", "dropping"],
+                   default="pendulum")
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--max_frames", type=int, default=0,
                    help="Optional cap on number of frames (0 = all)")
