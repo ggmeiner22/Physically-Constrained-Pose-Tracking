@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import torch
 import torch.optim as optim
 from .pipeline import PosePipeline
-from .data import FrameBatch
+from .data_legacy import FrameBatch
 from .losses import total_loss
 
 

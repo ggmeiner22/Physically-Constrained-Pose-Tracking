@@ -49,30 +49,33 @@ Run: make dev
 make manifest
 ```
 
-  6. Train the detector:
+  6. Train the Train the detector:
 ```
 make traindet
 ```
 
-  7. Train the position model:
+  7. Train the position regression model:
 ```
 make trainpos 
 ```
 
-  8. Train the temporal / main model:
+  8. train the PHYSICS + FILTER model (using detector+position outputs):
 ```
-make train    # runs train.py using the CSV manifests
+make train
 ```
 
-  9. Run the pose model on clips (requires detector & position checkpoints):
+  9. Run inference on video clips (requires detector & position checkpoints):
 ```
-make runclips #runs run_pose_model_on_clips.py; provide detector_ckpt and position_ckpt
+make runclips
 ```
-  10. Visualize results:
+> runs run_pose_model_on_clips.py
+> provide detector_ckpt and position_ckpt
+
+  10. Visualize trajectories:
 ```
   make viz
-  make viz-one
 ```
+> To visualize boudning box: Visualize trajectories
 11. Optional maintenance:
 
 Lock deps: 
