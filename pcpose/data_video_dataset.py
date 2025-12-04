@@ -64,7 +64,7 @@ class VideoClipDataset(Dataset):
         self.index: List[Tuple[int, int]] = []
         self.lengths: List[int] = []
         for i, row in enumerate(self.rows):
-            vpath = row["path"]
+            vpath = row["image_path"]
             T = _video_length(vpath)
             self.lengths.append(T)
             max_start = max(0, T - clip_len)

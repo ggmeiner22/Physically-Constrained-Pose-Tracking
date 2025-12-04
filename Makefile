@@ -25,8 +25,7 @@ train:
   --position_ckpt outputs/position/best_position.pt \
   --train_manifest data/manifest_train.json \
   --val_manifest   data/manifest_val.json \
-  --scenario pendulum \
-  --filter ekf
+  --scenario sliding
 
 traindet:
 > $(ACT) && python train_detector.py \

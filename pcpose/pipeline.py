@@ -45,8 +45,8 @@ class PosePipeline(nn.Module):
         # ---- Temporal filter ----
         if filter_type == "ekf":
             self._filter_cfg = EKFConfig(
-                dt=self.params.dt,
-                gravity=self.params.gravity,
+                dt=1/30,
+                gravity=9.81,
                 use_velocity_measurement=use_vel_meas,
             )
             self.filter_type = "ekf"
@@ -56,6 +56,8 @@ class PosePipeline(nn.Module):
             self.filter_type = "ema"
         else:
             raise ValueError("filter_type must be 'ekf' or 'ema'")
+
+        self.weights = LossWeights()
 
     # -------------------------------------------------------------------------
     # Core forward: used by training. train.py calls model.backbone(...) directly,
@@ -92,7 +94,7 @@ class PosePipeline(nn.Module):
             # two-stage: returns positions (B,T,3)
             pos_bt = self.backbone(frames.unsqueeze(0))  # (1,T,3)
             pos_seq = pos_bt[0]                          # (T,3)
-            y_seq = _positions_to_measurements(pos_seq, dt=self.params.dt)  # (T,4)
+            y_seq = _positions_to_measurements(pos_seq, dt=1/30)  # (T,4)
         elif getattr(self.backbone, "expects_sequence", False):
             # temporal backbones: already output (B,T,4)
             y_bt = self.backbone(frames.unsqueeze(0))  # (1,T,4)
