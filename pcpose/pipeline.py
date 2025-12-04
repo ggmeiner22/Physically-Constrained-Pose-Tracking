@@ -43,7 +43,7 @@ class PosePipeline(nn.Module):
         # Physics + loss config
         # ---------------------------------------------------------------------
         # PhysicsParams typically carries dt, gravity, anchor, cable_length, etc.
-        self.params: PhysicsParams = PhysicsParams.for_scenario(scenario)
+        self.params: PhysicsParams = PhysicsParams()
         # LossWeights carries lambda_phys, lambda_smooth, etc.
         self.weights: LossWeights = LossWeights()
 
