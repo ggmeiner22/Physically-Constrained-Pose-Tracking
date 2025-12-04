@@ -63,6 +63,7 @@ make trainpos
 ```
 make train
 ```
+> Currently, not working...
 
   9. Run inference on video clips (requires detector & position checkpoints):
 ```
@@ -75,6 +76,7 @@ make runclips
 ```
   make viz
 ```
+> Currently, not working...
 > To visualize boudning box: Visualize trajectories
 11. Optional maintenance:
 
